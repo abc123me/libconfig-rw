@@ -1,2 +1,3 @@
 main
 *.o
+.*.c.kate-swp
