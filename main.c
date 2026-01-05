@@ -110,39 +110,6 @@ exit_with_ret:
 inline int is_type_auto(const cfg_type_t* type) {
 	return type->size == 0;
 }
-int common_init(const config_t *cfg, const char *tstr, const char *key, config_setting_t **sett_ptr, cfg_type_t *type) {
-	int ret;
-
-	/* get the configuration type */
-	ret = get_type(tstr, type);
-	if(ret)
-		return ret;
-
-	/* get the configuration setting */
-	ret = get_setting(cfg, key, sett_ptr, type->id);
-	if(ret)
-		return ret;
-
-	/* automatic type handling */
-	if(is_type_auto(type)) {
-		int auto_id = config_setting_type(*sett_ptr);
-		int new_index = -1;
-		for(int i = 0; types[i].str; i++) {
-			if(auto_id == types[i].id && !is_type_auto(&types[i])) {
-				new_index = i;
-				break;
-			}
-		}
-		if(new_index < 0) {
-			fprintf(stderr, "Error: Cannot determine a supported automatic type!\n");
-			return -1;
-		} else {
-			memcpy(type, &types[new_index], sizeof(cfg_type_t));
-		}
-	}
-
-	return ret;
-}
 int get_type(const char *tstr, cfg_type_t *type) {
 	if(!tstr) {
 		fprintf(stderr, "Error: Type is nullptr, cannot continue!\n");
@@ -175,6 +142,39 @@ int get_setting(const config_t *cfg, const char *key, config_setting_t **sett, i
 	}
 	*sett = tmp;
 	return 0;
+}
+int common_init(const config_t *cfg, const char *tstr, const char *key, config_setting_t **sett_ptr, cfg_type_t *type) {
+	int ret;
+
+	/* get the configuration type */
+	ret = get_type(tstr, type);
+	if(ret)
+		return ret;
+
+	/* get the configuration setting */
+	ret = get_setting(cfg, key, sett_ptr, type->id);
+	if(ret)
+		return ret;
+
+	/* automatic type handling */
+	if(is_type_auto(type)) {
+		int auto_id = config_setting_type(*sett_ptr);
+		int new_index = -1;
+		for(int i = 0; types[i].str; i++) {
+			if(auto_id == types[i].id && !is_type_auto(&types[i])) {
+				new_index = i;
+				break;
+			}
+		}
+		if(new_index < 0) {
+			fprintf(stderr, "Error: Cannot determine a supported automatic type!\n");
+			return -1;
+		} else {
+			memcpy(type, &types[new_index], sizeof(cfg_type_t));
+		}
+	}
+
+	return ret;
 }
 
 int usage(char *prog, char *msg) {
