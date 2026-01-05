@@ -1,7 +1,7 @@
 PKGS=libconfig
 PKG_CFLAGS=$(shell pkg-config --cflags $(PKGS))
 LIBS=$(shell pkg-config --libs $(PKGS)) -lm
-OBJS=write.o read.o
+OBJS=write.o read.o misc.o
 CFLAGS+=-Wall -Werror
 
 %.o: %.c

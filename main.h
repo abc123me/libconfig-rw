@@ -49,8 +49,6 @@ static const cfg_type_t types[] = {
 
 int is_type_auto(const cfg_type_t*);
 int common_init(const config_t*, const char*, const char*, config_setting_t**, cfg_type_t*);
-int write_cfg(const config_t*, char*, char*, char*);
-int read_cfg(const config_t*, char*, char*, char*);
 int print_cfg_err(const config_t*, const char*);
 
 #endif

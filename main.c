@@ -6,13 +6,13 @@
 #define _CFG_DEFINE_IMPLS
 #include "main.h"
 
+int dump_cfg(const config_t*, char*, char*, char*);
+int read_cfg(const config_t*, char*, char*, char*);
+int type_cfg(const config_t*, char*, char*, char*);
+int write_cfg(const config_t*, char*, char*, char*);
+
 int usage(char *prog, char *msg);
 char* strip_dashes(char*);
-
-int dump_cfg(config_t *cfg) {
-	// TODO
-	return ENOTSUP;
-}
 
 int main(int argc, char** argv) {
 	int ret, cfg_ret, cfg_write;
@@ -58,13 +58,19 @@ int main(int argc, char** argv) {
 
 			/* check for dump mode first, its the easiest */
 			if(strcmp(mode, "dump") == 0 || strcmp(mode, "d") == 0) {
-				ret = dump_cfg(&cfg);
+				ret = dump_cfg(&cfg, type, key, val);
 			} else if(strcmp(mode, "read") == 0 || strcmp(mode, "r") == 0) {
-				if(!type) { ret = usage(argv[0], "Type wasn't given for read command!");  if(ret) goto exit_with_ret; }
-				if(!key)  { ret = usage(argv[0], "Key wasn't given for read command!");   if(ret) goto exit_with_ret; }
+				if(!type) { ret = usage(argv[0], "Type wasn't given for read command!");   if(ret) goto exit_with_ret; }
+				if(!key)  { ret = usage(argv[0], "Key wasn't given for read command!");    if(ret) goto exit_with_ret; }
 				if(ret)
 					goto exit_with_ret;
 				ret = read_cfg(&cfg, type, key, val);
+			} else if(strcmp(mode, "type") == 0 || strcmp(mode, "t") == 0) {
+				key = type; type = "auto";
+				if(!key)  { ret = usage(argv[0], "Key wasn't given for type command!");    if(ret) goto exit_with_ret; }
+				if(ret)
+					goto exit_with_ret;
+				ret = type_cfg(&cfg, type, key, val);
 			} else if(strcmp(mode, "write") == 0 || strcmp(mode, "w") == 0) {
 				if(!type) { ret = usage(argv[0], "Type wasn't given for write command!");  if(ret) goto exit_with_ret; }
 				if(!key)  { ret = usage(argv[0], "Key wasn't given for write command!");   if(ret) goto exit_with_ret; }
@@ -207,6 +213,8 @@ int usage(char *prog, char *msg) {
 		"            expects: <type> <key> [default]\n"
 		"  w/write - sets configuration value\n"
 		"            expects: <type> <key> <val>\n"
+		"  t/type  - reads configuration type\n"
+		"            expects: <key>\n"
 		"Accepted types:\n  %s\n"
 		"Examples:\n"
 		"  Write string \"test\" to \"example.cfg\":\n"
