@@ -9,21 +9,20 @@
 
 #include <libconfig.h>
 
-typedef int (*config_lookup_func_t)(const config_t*, const char*, volatile void*);
-typedef int (*config_setting_set_func_t)(config_setting_t*, volatile void*);
+typedef int (*config_setting_func_t)(config_setting_t*, volatile void*);
 
 struct cfg_type {
 	int id;
 	const char* str;
 	const char* sstr;
 	size_t size;
-	config_lookup_func_t lookup;
-	config_setting_set_func_t setting_set;
+	config_setting_func_t setting_get;
+	config_setting_func_t setting_set;
 };
 typedef struct cfg_type cfg_type_t;
 
-#define _CFG_GET_FUNC(LTYPE) (config_lookup_func_t)      config_lookup_##LTYPE
-#define _CFG_SET_FUNC(LTYPE) (config_setting_set_func_t) _ptr_impl_config_setting_set_##LTYPE
+#define _CFG_GET_FUNC(LTYPE) (config_setting_func_t) config_setting_get_##LTYPE##_safe
+#define _CFG_SET_FUNC(LTYPE) (config_setting_func_t) _ptr_impl_config_setting_set_##LTYPE
 #define _CFG_ENTRY(UTYPE, LTYPE, SHAND, CTYPE) { CONFIG_TYPE_##UTYPE, #LTYPE, #SHAND, sizeof(CTYPE), _CFG_GET_FUNC(LTYPE), _CFG_SET_FUNC(LTYPE) },
 
 #ifdef _CFG_DEFINE_IMPLS
@@ -44,11 +43,13 @@ static const cfg_type_t types[] = {
 	_CFG_ENTRY(FLOAT,  float,  f, double)
 	_CFG_ENTRY(BOOL,   bool,   b, int)
 	_CFG_ENTRY(STRING, string, s, const char*)
-	// { 0, "auto", "a", 0, NULL, NULL },
+	{ 0, "auto", "a", 0, NULL, NULL },
 	{ 0, NULL, NULL, 0, NULL, NULL },
 };
 
-int get_type(char*, cfg_type_t*);
+int is_type_auto(const cfg_type_t*);
+int common_init(const config_t*, const char*, const char*, config_setting_t**, cfg_type_t*);
+int get_type(const char*, cfg_type_t*);
 int get_setting(const config_t*, const char*, config_setting_t**, int);
 int write_cfg(const config_t*, char*, char*, char*);
 int read_cfg(const config_t*, char*, char*, char*);

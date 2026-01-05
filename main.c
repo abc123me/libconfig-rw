@@ -60,8 +60,8 @@ int main(int argc, char** argv) {
 			if(strcmp(mode, "dump") == 0 || strcmp(mode, "d") == 0) {
 				ret = dump_cfg(&cfg);
 			} else if(strcmp(mode, "read") == 0 || strcmp(mode, "r") == 0) {
-				if(!type) { ret = usage(argv[0], "Type wasn't given for write command!");  if(ret) goto exit_with_ret; }
-				if(!key)  { ret = usage(argv[0], "Key wasn't given for write command!");   if(ret) goto exit_with_ret; }
+				if(!type) { ret = usage(argv[0], "Type wasn't given for read command!");  if(ret) goto exit_with_ret; }
+				if(!key)  { ret = usage(argv[0], "Key wasn't given for read command!");   if(ret) goto exit_with_ret; }
 				if(ret)
 					goto exit_with_ret;
 				ret = read_cfg(&cfg, type, key, val);
@@ -107,7 +107,43 @@ exit_with_ret:
 	return ret;
 }
 
-int get_type(char *tstr, cfg_type_t *type) {
+inline int is_type_auto(const cfg_type_t* type) {
+	return type->size == 0;
+}
+int common_init(const config_t *cfg, const char *tstr, const char *key, config_setting_t **sett_ptr, cfg_type_t *type) {
+	int ret;
+
+	/* get the configuration type */
+	ret = get_type(tstr, type);
+	if(ret)
+		return ret;
+
+	/* get the configuration setting */
+	ret = get_setting(cfg, key, sett_ptr, type->id);
+	if(ret)
+		return ret;
+
+	/* automatic type handling */
+	if(is_type_auto(type)) {
+		int auto_id = config_setting_type(*sett_ptr);
+		int new_index = -1;
+		for(int i = 0; types[i].str; i++) {
+			if(auto_id == types[i].id && !is_type_auto(&types[i])) {
+				new_index = i;
+				break;
+			}
+		}
+		if(new_index < 0) {
+			fprintf(stderr, "Error: Cannot determine a supported automatic type!\n");
+			return -1;
+		} else {
+			memcpy(type, &types[new_index], sizeof(cfg_type_t));
+		}
+	}
+
+	return ret;
+}
+int get_type(const char *tstr, cfg_type_t *type) {
 	if(!tstr) {
 		fprintf(stderr, "Error: Type is nullptr, cannot continue!\n");
 		return -1;
@@ -115,10 +151,6 @@ int get_type(char *tstr, cfg_type_t *type) {
 
 	for(int i = 0; types[i].str; i++) {
 		if(strcmp(types[i].str, tstr) == 0 || (types[i].sstr && strcmp(types[i].sstr, tstr) == 0)) {
-			if(types[i].size <= 0 || types[i].setting_set == NULL || types[i].lookup == NULL) {
-				fprintf(stderr, "Error: Type has an invalid parameter, cannot continue!\n");
-				return -1;
-			}
 			memcpy(type, &types[i], sizeof(cfg_type_t));
 			return 0;
 		}
@@ -129,6 +161,7 @@ int get_type(char *tstr, cfg_type_t *type) {
 }
 int get_setting(const config_t *cfg, const char *key, config_setting_t **sett, int type_id) {
 	config_setting_t *tmp;
+
 	/* get the configuration setting */
 	tmp = config_lookup(cfg, ((const char*) key));
 	if(tmp == NULL) {
@@ -143,6 +176,7 @@ int get_setting(const config_t *cfg, const char *key, config_setting_t **sett, i
 	*sett = tmp;
 	return 0;
 }
+
 int usage(char *prog, char *msg) {
 	const int len = 256;
 	char tstr[len];
@@ -185,6 +219,7 @@ int usage(char *prog, char *msg) {
 		pstr, tstr, pstr, pstr);
 	return msg ? EINVAL : 0;
 }
+
 int print_cfg_err(const config_t *cfg, const char *func) {
 	fprintf(stderr, "Error: %s failed with below error on line %d!\n", func, config_error_line(cfg));
 	switch(config_error_type(cfg)) {
@@ -202,6 +237,7 @@ int print_cfg_err(const config_t *cfg, const char *func) {
 			return -1;
 	}
 }
+
 char* strip_dashes(char* str) {
 	while(str && *str == '-')
 		str++;

@@ -2,25 +2,14 @@
 
 int write_cfg(const config_t *cfg, char *tstr, char *key, char *val) {
 	config_setting_t *sett;
-	volatile void *res;
 	cfg_type_t type;
+	volatile void *res;
 	int ret;
 
-	// TODO support automatic type detection via config_setting_type
-	ret = get_type(tstr, &type);
+	/* get the configuration setting */
+	ret = common_init(cfg, (const char*) tstr, (const char*) key, &sett, &type);
 	if(ret)
 		return ret;
-
-	/* get the conffiguration setting */
-	sett = config_lookup(cfg, ((const char*) key));
-	if(sett == NULL) {
-		sett = config_root_setting(cfg);
-		if(sett == NULL)
-			return print_cfg_err(cfg, "config_root_setting");
-		sett = config_setting_add(sett, (const char*) key, type.id);
-		if(sett == NULL)
-			return print_cfg_err(cfg, "config_setting_add");
-	}
 
 	/* parse the value */
 	res = alloca(type.size);

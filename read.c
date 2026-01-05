@@ -1,6 +1,7 @@
 #include "main.h"
 
 int read_cfg(const config_t *cfg, char *tstr, char *key, char *val) {
+	config_setting_t *sett;
 	cfg_type_t type;
 	volatile void *res;
 	int ret;
@@ -9,8 +10,8 @@ int read_cfg(const config_t *cfg, char *tstr, char *key, char *val) {
 	if(val)
 		return ENOTSUP;
 
-	// TODO support automatic type detection via config_setting_type
-	ret = get_type(tstr, &type);
+	/* get the configuration setting */
+	ret = common_init(cfg, (const char*) tstr, (const char*) key, &sett, &type);
 	if(ret)
 		return ret;
 
@@ -18,7 +19,7 @@ int read_cfg(const config_t *cfg, char *tstr, char *key, char *val) {
 	res = alloca(type.size);
 
 	/* read the value */
-	ret = type.lookup(cfg, key, res);
+	ret = type.setting_get(sett, res);
 
 	if(ret == CONFIG_TRUE) {
 		switch(type.id) {
