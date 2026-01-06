@@ -222,3 +222,11 @@ bats_load_library '/usr/lib/bats/bats-assert/load.bash'
 	run ./main test.cfg read auto new-float
 	assert_output "42.696900"
 }
+
+@test "test cleanup" {
+	run git restore test.cfg
+	assert_success
+
+	run make clean
+	assert_success
+}
