@@ -1,3 +1,4 @@
 main
 *.o
 .*.c.kate-swp
+test.cfg
