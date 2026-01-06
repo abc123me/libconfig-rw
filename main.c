@@ -10,6 +10,7 @@ int dump_cfg(const config_t*, char*, char*, char*);
 int read_cfg(const config_t*, char*, char*, char*);
 int type_cfg(const config_t*, char*, char*, char*);
 int write_cfg(const config_t*, char*, char*, char*);
+int delete_cfg(const config_t*, char*, char*, char*);
 
 int usage(char *prog, char *msg);
 char* strip_dashes(char*);
@@ -71,11 +72,16 @@ int main(int argc, char** argv) {
 				if(ret)
 					goto exit_with_ret;
 				ret = type_cfg(&cfg, type, key, val);
+			} else if(strcmp(mode, "delete") == 0) {
+				key = type; type = "auto"; val = NULL;
+				if(!key)  { ret = usage(argv[0], "Key wasn't given for delete command!");  if(ret) goto exit_with_ret; }
+				ret = delete_cfg(&cfg, type, key, val);
+				if(ret == 0)
+					cfg_write = 1;
 			} else if(strcmp(mode, "write") == 0 || strcmp(mode, "w") == 0) {
 				if(!type) { ret = usage(argv[0], "Type wasn't given for write command!");  if(ret) goto exit_with_ret; }
 				if(!key)  { ret = usage(argv[0], "Key wasn't given for write command!");   if(ret) goto exit_with_ret; }
 				if(!val)  { ret = usage(argv[0], "Value wasn't given for write command!"); if(ret) goto exit_with_ret; }
-
 				ret = write_cfg(&cfg, type, key, val);
 				if(ret == 0)
 					cfg_write = 1;
@@ -114,6 +120,7 @@ exit_with_ret:
 }
 
 inline int is_type_auto(const cfg_type_t* type) {
+	/* make sure to update common_init if logic changes */
 	return type->size == 0;
 }
 int get_type(const char *tstr, cfg_type_t *type) {
@@ -132,24 +139,8 @@ int get_type(const char *tstr, cfg_type_t *type) {
 	fprintf(stderr, "Error: Invalid / Unknown type \"%s\" given!\n", tstr);
 	return EINVAL;
 }
-int get_setting(const config_t *cfg, const char *key, config_setting_t **sett, int type_id) {
-	config_setting_t *tmp;
-
-	/* get the configuration setting */
-	tmp = config_lookup(cfg, ((const char*) key));
-	if(tmp == NULL) {
-		/* create it if it doesn't exist */
-		tmp = config_root_setting(cfg);
-		if(tmp == NULL)
-			return print_cfg_err(cfg, "config_root_setting");
-		tmp = config_setting_add(tmp, (const char*) key, type_id);
-		if(tmp == NULL)
-			return print_cfg_err(cfg, "config_setting_add");
-	}
-	*sett = tmp;
-	return 0;
-}
-int common_init(const config_t *cfg, const char *tstr, const char *key, config_setting_t **sett_ptr, cfg_type_t *type) {
+int common_init(const config_t *cfg, const char *tstr, const char *key, config_setting_t **sett_ptr, cfg_type_t *type, int flags) {
+	config_setting_t* tmp;
 	int ret;
 
 	/* get the configuration type */
@@ -158,13 +149,31 @@ int common_init(const config_t *cfg, const char *tstr, const char *key, config_s
 		return ret;
 
 	/* get the configuration setting */
-	ret = get_setting(cfg, key, sett_ptr, type->id);
-	if(ret)
-		return ret;
+	tmp = config_lookup(cfg, ((const char*) key));
+	if(tmp == NULL) {
+		if(flags & INIT_FLAG_CREATE) {
+			/* fail if using auto type and trying to create a config */
+			if(is_type_auto(type))
+				return ENOTSUP;
+
+			/* create it if it doesn't exist */
+			tmp = config_root_setting(cfg);
+			if(tmp == NULL)
+				return print_cfg_err(cfg, "config_root_setting");
+
+			/* add the setting */
+			tmp = config_setting_add(tmp, (const char*) key, type->id);
+			if(tmp == NULL)
+				return print_cfg_err(cfg, "config_setting_add");
+		} else {
+			fprintf(stderr, "Error: Configuration \"%s\" does not exist!", key);
+			return ENXIO;
+		}
+	}
 
 	/* automatic type handling */
 	if(is_type_auto(type)) {
-		int auto_id = config_setting_type(*sett_ptr);
+		int auto_id = config_setting_type(tmp);
 		int new_index = -1;
 		for(int i = 0; types[i].str; i++) {
 			if(auto_id == types[i].id && !is_type_auto(&types[i])) {
@@ -180,6 +189,7 @@ int common_init(const config_t *cfg, const char *tstr, const char *key, config_s
 		}
 	}
 
+	*sett_ptr = tmp;
 	return ret;
 }
 
@@ -214,6 +224,8 @@ int usage(char *prog, char *msg) {
 		"  w/write - sets configuration value\n"
 		"            expects: <type> <key> <val>\n"
 		"  t/type  - reads configuration type\n"
+		"            expects: <key>\n"
+		"  delete  - deletes a configuration value\n"
 		"            expects: <key>\n"
 		"Accepted types:\n  %s\n"
 		"Examples:\n"

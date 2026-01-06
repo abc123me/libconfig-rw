@@ -15,7 +15,7 @@ struct cfg_type {
 	int id;
 	const char* str;
 	const char* sstr;
-	size_t size;
+	size_t size; /* size of 0 is used here to indicate an automatic type */
 	config_setting_func_t setting_get;
 	config_setting_func_t setting_set;
 };
@@ -47,8 +47,13 @@ static const cfg_type_t types[] = {
 	{ 0, NULL, NULL, 0, NULL, NULL },
 };
 
+#define INIT_FLAG_CREATE    1
+
+#define INIT_FLAGS_READ  (0)
+#define INIT_FLAGS_WRITE (INIT_FLAG_CREATE)
+
 int is_type_auto(const cfg_type_t*);
-int common_init(const config_t*, const char*, const char*, config_setting_t**, cfg_type_t*);
+int common_init(const config_t*, const char*, const char*, config_setting_t**, cfg_type_t*, int);
 int print_cfg_err(const config_t*, const char*);
 
 #endif

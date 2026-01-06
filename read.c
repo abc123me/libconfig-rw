@@ -11,7 +11,7 @@ int read_cfg(const config_t *cfg, char *tstr, char *key, char *val) {
 		return ENOTSUP;
 
 	/* get the configuration setting */
-	ret = common_init(cfg, (const char*) tstr, (const char*) key, &sett, &type);
+	ret = common_init(cfg, (const char*) tstr, (const char*) key, &sett, &type, INIT_FLAGS_READ);
 	if(ret)
 		return ret;
 

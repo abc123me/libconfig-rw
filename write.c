@@ -7,7 +7,7 @@ int write_cfg(const config_t *cfg, char *tstr, char *key, char *val) {
 	int ret;
 
 	/* get the configuration setting */
-	ret = common_init(cfg, (const char*) tstr, (const char*) key, &sett, &type);
+	ret = common_init(cfg, (const char*) tstr, (const char*) key, &sett, &type, INIT_FLAGS_WRITE);
 	if(ret)
 		return ret;
 
